@@ -1,0 +1,297 @@
+# Raccoons API
+Simple CRUD API for Raccoon Objects
+
+## Installation
+- Get the project
+    - clone  
+        ```
+      git clone https://github.com/alai7/csc340-hw4.git
+        ``` 
+    - OR download zip.
+- Open the project in IntelliJ.
+- This project is built to run with jdk 21.
+- [`/src/main/resources/application.properties`](https://github.com/uncg-csc340/sp25-crud-api-jpa/blob/d117dd0cad30a0453254dd261248c249be9654aa/src/main/resources/application.properties) file  is the configuration for the MySQL database on your localhost.
+  - the database name is on the `datasource.url` property between the last `/` and the `?`. In this case the database name is `raccoonDB`.
+  - You MUST have the database up and running before running the project! 
+    - Start your AMPPS Server.
+    - Click on the Home icon to open the localhost server on your browser.
+    - Go to Database Tools and open phpMyAdmin to start up the MySQL Dashboard.
+    - Ensure the database that you need is available. Either
+      - Create a database called `raccoonDB`
+      - OR edit `datasource.url` to point to a database that you do have.
+  - Verify your username and password is spelled correctly in the properties file.
+- Build and run the main class. You should see a new table created in the aforementioned database.
+## Notes
+### Raccoon Java classes have different purposes: Separation of concerns!
+- [Entity](https://github.com/alai7/csc340-hw4/blob/main/src/main/java/com/hw4_try2/demo/raccoon/Raccoon.java)
+  - The Raccoon class is annotated as an `@Entity `. This is used by Hibernate (an implementation of the Jakarta Persistence API) to map class attributes to database tables and SQL types.
+  - We also annotated with `@Table` to give Hibernate directions to use this specific table name. This is optional but it helps with naming conventions.
+  - Any Entity must have at least one attribute that is annotated as an `@Id`. In our case it's conveniently the `raccoonId` attribute.
+    - We are also using an autogeneration strategy for the ID. This way we are not manually assigning IDs to our raccoons. This is optional.
+  - An Entity must have a no-argument constructor.
+- [Repository](https://github.com/alai7/csc340-hw4/blob/main/src/main/java/com/hw4_try2/demo/raccoon/RaccoonRepository.java)
+  - We are using an extension of the JPA Repository that comes with prebuilt database operations such as select all, select by id, select by any other reference, insert, delete, etc.
+  - Annotate it as a `@Repository`.
+  - We parametrize this using our object and its ID type.
+    - `public interface RaccoonRepository extends JpaRepository<Raccoon, Integer>` => We want to apply the JPA repository operations on the `Raccoon` type. The `Raccoon` has an ID of type `int`.
+  - If we need special database queries that are not the standard ones mentioned above, we can create [a method with a special purpose query](https://github.com/alai7/csc340-hw4/blob/main/src/main/java/com/hw4_try2/demo/raccoon/RaccoonService.java) as shown. This is an interface so no implementation body.
+- [Service](https://github.com/alai7/csc340-hw4/blob/main/src/main/java/com/hw4_try2/demo/raccoon/RaccoonService.java)
+  - Annotated as a `@Service`.
+  - It is the go-between from controller to database. In here we define what functions we need from the repository. A lot of the functions are default functions that our repository inherits from JPA (save, delete, findAll, findByX), some of them are custom made (getHonorsStudents, getStudentsByName).
+  - It asks the repository to perform SQL queries.
+  - The Repository class is [`@Autowired`](https://github.com/alai7/csc340-hw4/blob/main/src/main/java/com/hw4_try2/demo/raccoon/RaccoonService.java). This is for managing the dependency to the repository. Do not use a constructor to make a Repository object, you will get errors. 
+- [Rest Controller](https://github.com/alai7/csc340-hw4/blob/main/src/main/java/com/hw4_try2/demo/raccoon/RaccoonController.java)
+  - Annotated as a `@RestController`.
+  - All the API endpoints mapped inside this controller will start with `/raccoons`.
+  - Return a Response Object.
+  - It asks the Service class to perform data access functions.
+  - The Service class is [`@Autowired`](https://github.com/alai7/csc340-hw4/blob/main/src/main/java/com/hw4_try2/demo/raccoon/RaccoonService.java) here as well :)
+## API Endpoints
+Base URL: [`http://localhost:8080/raccoons`](http://localhost:8080/raccoons)
+
+
+### [`/all`](http://localhost:8080/raccoons/all) (GET)
+Gets a list of all Raccoons in the database.
+
+#### Response - A JSON array of Raccoon objects.
+
+ ```
+[
+  {
+        "raccoonId": 2345,
+        "name": "bobby",
+        "species": "P. Locor",
+        "size": 67.4,
+        "weight": 2.34
+    },
+    {
+        "raccoonId": 2347,
+        "name": "Anthony Lai",
+        "species": "raccoon",
+        "size": 6.2,
+        "weight": 150.0
+    }
+]
+```
+
+### [`/{raccoonId}`](http://localhost:8080/raccoons/1) (GET)
+Gets an individual Student in the system. Each Student is identified by a numeric `raccoonId`
+
+#### Parameters
+- Path Variable: `raccoonId` &lt;integer&gt; - REQUIRED
+
+#### Response - A single Raccoon
+
+```
+{
+        "raccoonId": 2345,
+        "name": "bobby",
+        "species": "P. Locor",
+        "size": 67.4,
+        "weight": 2.34
+    }
+```
+
+### [`/name`](http://localhost:8080/raccoons/name?search=bob) (GET)
+Gets a list of raccoons with a name that contains the given string.
+
+#### Parameters
+- query parameter: `search` lt;String&gt; - REQUIRED
+
+#### Response - A JSON array of Raccoon objects.
+
+```
+[
+  {
+        "raccoonId": 2345,
+        "name": "bobby",
+        "species": "P. Locor",
+        "size": 67.4,
+        "weight": 2.34
+    },
+    {
+        "raccoonId": 2347,
+        "name": "Bobby Lai",
+        "species": "raccoon",
+        "size": 6.2,
+        "weight": 150.0
+    }
+]
+```
+
+### [`/major/{major}`](http://localhost:8080/raccoons/species/p.&locor) (GET)
+Gets a list of raccoons for a named species.
+
+#### Parameters
+- path variable: `species` &lt;String&gt; - REQUIRED
+
+#### Response - A JSON array of Student objects.
+
+```
+[
+  {
+        "raccoonId": 2345,
+        "name": "bobby",
+        "species": "P. Locor",
+        "size": 67.4,
+        "weight": 2.34
+    },
+    {
+        "raccoonId": 2347,
+        "name": "Anthony Lai",
+        "species": "p. locor",
+        "size": 6.2,
+        "weight": 150.0
+    }
+]
+```
+
+### [`/chonky`](http://localhost:8080/raccoons/chonky?chonk=7.0) (GET)
+Gets a list of Raccoons with a size meeting the Threshold.
+
+#### Parameters
+- query parameter: `size` &lt;Double&gt; - REQUIRED
+
+#### Response - A JSON array of Raccoon objects.
+
+```
+[
+  {
+        "raccoonId": 2345,
+        "name": "bobby",
+        "species": "P. Locor",
+        "size": 67.4,
+        "weight": 2.34
+    },
+    {
+        "raccoonId": 2349,
+        "name": "Jesus",
+        "species": "raccoon hybrid",
+        "size": 85.4,
+        "weight": 1.2
+    }
+]
+```
+
+### [`/new`](http://localhost:8080/raccoons/new) (POST)
+Create  a new Raccoon entry
+ 
+#### Request Body
+A raccoon object. Note that the raccoonId is auto assigned in the database so is not needed in the request.
+```
+{ 
+  "name": "Richard",
+  "species": "raccoon hybrid",
+  "size": "85.4",
+  "weight": "1.2"
+}
+```
+#### Response - The updated list of Raccoons.
+
+```
+[
+  {
+        "raccoonId": 2345,
+        "name": "bobby",
+        "species": "P. Locor",
+        "size": 67.4,
+        "weight": 2.34
+    },
+    {
+        "raccoonId": 2347,
+        "name": "Anthony Lai",
+        "species": "raccoon",
+        "size": 6.2,
+        "weight": 150.0
+    },
+    {
+        "raccoonId": 2348,
+        "name": "barbados raccoon",
+        "species": "P. rotor",
+        "size": 1.3,
+        "weight": 7.7
+    },
+    {
+        "raccoonId": 2349,
+        "name": "Jesus",
+        "species": "raccoon hybrid",
+        "size": 85.4,
+        "weight": 1.2
+    },
+    {
+        "raccoonId": 2350,
+        "name": "Richard",
+        "species": "raccoon hybrid",
+        "size": 85.4,
+        "weight": 1.2
+    }
+]
+```
+
+### [`/update/{raccoonId}`](http://localhost:8080/raccoons/update/2350) (PUT)
+Update an existing Raccoon.
+
+#### Parameters
+- Path Variable: `raccoonId` &lt;integer&gt; - REQUIRED
+
+#### Request Body
+A raccoon object with the updates.
+```
+{
+        "raccoonId": 2350,
+        "name": "Richard",
+        "species": "Cocomuel raccoon",
+        "size": 85.4,
+        "weight": 1.2
+    }
+```
+#### Response - the updated Raccoon object.
+```
+{{
+    "raccoonId": 2347,
+    "name": "Richard",
+    "species": "Cocomuel raccoon",
+    "size": 85.4,
+    "weight": 1.2
+}
+```
+
+### [`/delete/{raccoonId}`](http://localhost:8080/raccoons/delete/2350) (DELETE)
+Delete an existing Raccoon.
+
+#### Parameters
+- Path Variable: `raccoonId` &lt;integer&gt; - REQUIRED
+
+#### Response - the updated list of Raccoons.
+```
+[
+  {
+        "raccoonId": 2345,
+        "name": "bobby",
+        "species": "P. Locor",
+        "size": 67.4,
+        "weight": 2.34
+    },
+    {
+        "raccoonId": 2347,
+        "name": "Richard",
+        "species": "Cocomuel raccoon",
+        "size": 85.4,
+        "weight": 1.2
+    },
+    {
+        "raccoonId": 2348,
+        "name": "barbados raccoon",
+        "species": "P. rotor",
+        "size": 1.3,
+        "weight": 7.7
+    },
+    {
+        "raccoonId": 2349,
+        "name": "Jesus",
+        "species": "raccoon hybrid",
+        "size": 85.4,
+        "weight": 1.2
+    }
+]
+```
